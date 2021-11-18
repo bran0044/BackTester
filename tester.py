@@ -1,18 +1,10 @@
-from __future__ import (absolute_import, division, print_function,
-                        unicode_literals)
-
-from datetime import datetime
+import datetime
+import os.path
+import sys
 import backtrader as bt
-import matplotlib
-from decimal import Decimal
+from backtrader.indicators import EMA
 
 
-data = bt.feeds.YahooFinanceCSVData(
-    dataname="data_(daily)\SPY.csv",
-    fromdate=datetime(2015,5, 12),
-    odate=datetime(2021, 11, 12))
-
-# Create a Stratey
 class TestStrategy(bt.Strategy):
     params = (
         ('maperiod', 15),
@@ -23,36 +15,28 @@ class TestStrategy(bt.Strategy):
         dt = dt or self.datas[0].datetime.date(0)
         print('%s, %s' % (dt.isoformat(), txt))
 
-    def __init__(self):
-        # Keep a reference to the "close" line in the data[0] dataseries
-        self.dataclose = self.datas[0].close
+    @staticmethod
+    def percent(today, yesterday):
+        return float(today - yesterday) / today
 
-        # To keep track of pending orders and buy price/commission
+    def __init__(self):
+        self.dataclose = self.datas[0].close
+        self.volume = self.datas[0].volume
+
         self.order = None
         self.buyprice = None
         self.buycomm = None
 
-        # Add a MovingAverageSimple indicator
-        self.sma = bt.indicators.SimpleMovingAverage(
-            self.datas[0], period=self.params.maperiod)
+        me1 = EMA(self.data, period=12)
+        me2 = EMA(self.data, period=26)
+        self.macd = me1 - me2
+        self.signal = EMA(self.macd, period=9)
 
-        # Indicators for the plotting show
-        bt.indicators.ExponentialMovingAverage(self.datas[0], period=25)
-        bt.indicators.WeightedMovingAverage(self.datas[0], period=25,
-                                            subplot=True)
-        bt.indicators.StochasticSlow(self.datas[0])
-        bt.indicators.MACDHisto(self.datas[0])
-        rsi = bt.indicators.RSI(self.datas[0])
-        bt.indicators.SmoothedMovingAverage(rsi, period=10)
-        bt.indicators.ATR(self.datas[0], plot=False)
+        bt.indicators.MACDHisto(self.data)
 
     def notify_order(self, order):
         if order.status in [order.Submitted, order.Accepted]:
-            # Buy/Sell order submitted/accepted to/by broker - Nothing to do
             return
-
-        # Check if an order has been completed
-        # Attention: broker could reject order if not enough cash
         if order.status in [order.Completed]:
             if order.isbuy():
                 self.log(
@@ -63,18 +47,17 @@ class TestStrategy(bt.Strategy):
 
                 self.buyprice = order.executed.price
                 self.buycomm = order.executed.comm
-            else:  # Sell
+                self.bar_executed_close = self.dataclose[0]
+            else:
                 self.log('SELL EXECUTED, Price: %.2f, Cost: %.2f, Comm %.2f' %
                          (order.executed.price,
                           order.executed.value,
                           order.executed.comm))
-
             self.bar_executed = len(self)
 
         elif order.status in [order.Canceled, order.Margin, order.Rejected]:
             self.log('Order Canceled/Margin/Rejected')
 
-        # Write down: no pending order
         self.order = None
 
     def notify_trade(self, trade):
@@ -84,38 +67,66 @@ class TestStrategy(bt.Strategy):
         self.log('OPERATION PROFIT, GROSS %.2f, NET %.2f' %
                  (trade.pnl, trade.pnlcomm))
 
+    # Python 实用宝典
     def next(self):
-        # Simply log the closing price of the series from the reference
         self.log('Close, %.2f' % self.dataclose[0])
-
-        # Check if an order is pending ... if yes, we cannot send a 2nd one
         if self.order:
             return
 
-        # Check if we are in the market
         if not self.position:
-
-            # Not yet ... we MIGHT BUY if ...
-            if self.dataclose[0] > self.sma[0]:
-
-                # BUY, BUY, BUY!!! (with all possible default parameters)
+            condition1 = self.macd[-1] - self.signal[-1]
+            condition2 = self.macd[0] - self.signal[0]
+            if condition1 < 0 and condition2 > 0:
                 self.log('BUY CREATE, %.2f' % self.dataclose[0])
-
-                # Keep track of the created order to avoid a 2nd order
                 self.order = self.buy()
 
         else:
-
-            if self.dataclose[0] < self.sma[0]:
-                # SELL, SELL, SELL!!! (with all possible default parameters)
+            condition = (self.dataclose[0] - self.bar_executed_close) / self.dataclose[0]
+            if condition > 0.1 or condition < -0.1:
                 self.log('SELL CREATE, %.2f' % self.dataclose[0])
-
-                # Keep track of the created order to avoid a 2nd order
                 self.order = self.sell()
 
 
-cerebro = bt.Cerebro()
-cerebro.addstrategy(TestStrategy)
-cerebro.adddata(data)
-cerebro.run()
-cerebro.plot()
+if __name__ == '__main__':
+    cerebro = bt.Cerebro()
+
+    cerebro.addstrategy(TestStrategy)
+
+    modpath = os.path.dirname(os.path.abspath(sys.argv[0]))
+    datapath = os.path.join(modpath, '603186.csv')
+
+    # 加载数据到模型中
+    data = bt.feeds.GenericCSVData(
+        dataname=datapath,
+        fromdate=datetime.datetime(2010, 1, 1),
+        todate=datetime.datetime(2020, 4, 12),
+        dtformat='%Y%m%d',
+        datetime=2,
+        open=3,
+        high=4,
+        low=5,
+        close=6,
+        volume=10,
+        reverse=True
+    )
+    cerebro.adddata(data)
+
+    cerebro.broker.setcash(10000)
+
+    cerebro.addsizer(bt.sizers.FixedSize, stake=100)
+
+    cerebro.broker.setcommission(commission=0.005)
+
+    print('Starting Portfolio Value: %.2f' % cerebro.broker.getvalue())
+
+    cerebro.run()
+
+    print('Final Portfolio Value: %.2f' % cerebro.broker.getvalue())
+
+    cerebro.plot()
+
+    def _loadline(self, linetokens):
+        dtfield = linetokens[self.p.datetime]
+        dtime = datetime.utcfromtimestamp(int(dtfield))
+        linetokens[self.p.datetime] = dtime.strftime(self.p.dtformat)
+        return super(strategy, self)._loadline(linetokens)

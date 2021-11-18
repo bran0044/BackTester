@@ -1,28 +1,24 @@
 from datetime import datetime
 import backtrader as bt
 from decimal import Decimal
+import Strategies.mainstrat
 
-import Strategies.CROSSOVER
-from Strategies import CROSSOVER
+# CEREBRO SETTINGS
 cerebro = bt.Cerebro()
-
-# Starter cash
+cerebro.broker.setcommission(commission=0.001)
 cerebro.broker.set_cash(1000)
-
-# Allocation percentage
-cerebro.addsizer(bt.sizers.AllInSizer, percents=95)
-
-# Prints starter cash
+cerebro.addsizer(bt.sizers.AllInSizer, percents=99)
 value_before = Decimal(cerebro.broker.getvalue())
 
-# Historical data_(daily)
-data = bt.feeds.YahooFinanceData(
-    dataname='data_(daily)\PCG.csv',
-    fromdate=datetime(1980,1, 1),
-    odate=datetime(2021, 11, 12))
+# DATA
+data = bt.feeds.YahooFinanceCSVData(dataname='data_(daily)\\atos.csv',
+                                    fromdate=datetime(2020, 1, 1),
+                                    todate=datetime(2021, 1, 1))
+
+
 
 # INSERT STRATEGY
-strategy = Strategies.CROSSOVER.strategy
+strategy = Strategies.mainstrat.strategy
 
 # Runs and plots strategy
 cerebro.addstrategy(strategy)
