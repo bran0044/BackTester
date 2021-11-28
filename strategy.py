@@ -14,8 +14,8 @@ class strategy(bt.SignalStrategy):
         self.macd = bt.indicators.MACD(self.data, period_me1=12, period_me2=26, period_signal=9)
 
         # Moving Averages
-        self.ema = bt.ind.EMA(period=14)
-        self.sma = bt.ind.SMA(period=100)
+        self.ema = bt.ind.EMA(period=7)
+        self.sma = bt.ind.SMA(period=25)
 
         # RSI
         self.rsi = bt.ind.RSI(period=50)
@@ -34,7 +34,7 @@ class strategy(bt.SignalStrategy):
         if self.position:
             return
 
-    def notify_order(self, order):
+'''    def notify_order(self, order):
         if not order.status == order.Completed:
             return  # discard any other notification
         if not self.position:  # we left the market
@@ -44,4 +44,4 @@ class strategy(bt.SignalStrategy):
             self.sell(exectype=bt.Order.Stop, price=stop_price)
         else:
             self.sell(exectype=bt.Order.StopTrail, trailamount=self.p.trail)
-        return
+        return'''

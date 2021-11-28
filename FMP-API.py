@@ -1,8 +1,5 @@
-import pprint
 import requests
 import time
-import matplotlib.pyplot as plt
-import numpy
 import plotly.graph_objects as go
 start_time = time.time()
 date = []
@@ -10,9 +7,9 @@ open = []
 high = []
 low = []
 close = []
-auth = requests.get('https://financialmodelingprep.com/api/v3/historical-chart/5min/UBER?apikey=a695b9febb89a33c6e4362da9ffcdf5b')
+volume = []
+auth = requests.get('https://financialmodelingprep.com/api/v3/historical-chart/5min/ZM?apikey=a695b9febb89a33c6e4362da9ffcdf5b')
 fmp = auth.json()
-#print(fmp)
 
 for x in range(len(fmp)):
     date.append(fmp[x]['date'])
@@ -20,7 +17,8 @@ for x in range(len(fmp)):
     high.append(fmp[x]['high'])
     low.append(fmp[x]['low'])
     close.append(fmp[x]['close'])
-
+    volume.append(fmp[x]['volume'])
+print(volume)
 fig = go.Figure(data=[go.Candlestick(x=date,
                 open=open,
                 high=high,
