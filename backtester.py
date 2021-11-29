@@ -12,8 +12,8 @@ value_before = Decimal(cerebro.broker.getvalue())
 
 # DATA
 data = btfeeds.GenericCSVData(
-    dataname='Tickers\FB_15min.csv',
-    timeframe=bt.TimeFrame.Minutes, compression=15,
+    dataname='Tickers\SPY_30minute_2000-01-21_2021-11-26.csv',
+    timeframe=bt.TimeFrame.Minutes, compression=30,
     nullvalue=0.0,
     dtformat=('%Y-%m-%d %H:%M:%S'),
     datetime=0,

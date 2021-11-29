@@ -22,7 +22,7 @@ class strategy(bt.SignalStrategy):
 
         # Crosses
         self.cross = bt.ind.CrossOver(self.sma, self.data)
-        self.signal_add(bt.SIGNAL_LONG, self.cross)
+        #self.signal_add(bt.SIGNAL_LONG, self.cross)
 
         return
 
