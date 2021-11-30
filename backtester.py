@@ -1,6 +1,6 @@
 import backtrader as bt
 from decimal import Decimal
-import strategy
+from strategies import strategy
 import backtrader.feeds as btfeeds
 
 # CEREBRO SETTINGS
@@ -12,7 +12,7 @@ value_before = Decimal(cerebro.broker.getvalue())
 
 # DATA
 data = btfeeds.GenericCSVData(
-    dataname='Tickers\SPY_30minute_2000-01-21_2021-11-26.csv',
+    dataname='tickers\SPY_30minute_2000-01-21_2021-11-26.csv',
     timeframe=bt.TimeFrame.Minutes, compression=30,
     nullvalue=0.0,
     dtformat=('%Y-%m-%d %H:%M:%S'),
@@ -28,7 +28,7 @@ data = btfeeds.GenericCSVData(
 # INSERT STRATEGY
 strategy = strategy.strategy
 
-# Runs and plots strategy
+# Runs and plots strategies
 cerebro.addstrategy(strategy)
 cerebro.adddata(data)
 result = cerebro.run()
